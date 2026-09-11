@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -30,6 +31,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val carItems by viewModel.carItems.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     Scaffold(
         topBar = {
@@ -48,18 +50,38 @@ fun DashboardScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (carItems.isEmpty()) {
-                EmptyState(modifier = Modifier.align(Alignment.Center))
-            } else {
-                CarList(
-                    carItems = carItems,
-                    onCarClick = onCarClick
-                )
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text("Search cars (make, model, plate)...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (carItems.isEmpty()) {
+                    EmptyState(
+                        modifier = Modifier.align(Alignment.Center),
+                        isSearching = searchQuery.isNotEmpty()
+                    )
+                } else {
+                    CarList(
+                        carItems = carItems,
+                        onCarClick = onCarClick
+                    )
+                }
             }
         }
     }
@@ -129,18 +151,21 @@ fun CarCard(
 }
 
 @Composable
-fun EmptyState(modifier: Modifier = Modifier) {
+fun EmptyState(
+    modifier: Modifier = Modifier,
+    isSearching: Boolean = false
+) {
     Column(
         modifier = modifier.padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "No cars found",
+            text = if (isSearching) "No matches found" else "No cars found",
             style = MaterialTheme.typography.headlineSmall
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Tap the + button to add your first car.",
+            text = if (isSearching) "Try a different search term." else "Tap the + button to add your first car.",
             style = MaterialTheme.typography.bodyMedium
         )
     }

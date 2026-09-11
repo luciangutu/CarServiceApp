@@ -1,20 +1,28 @@
 package com.lucian.carserviceapp.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.lucian.carserviceapp.data.parseServiceOperations
 import com.lucian.carserviceapp.data.entity.Car
 import com.lucian.carserviceapp.data.entity.ServiceEntry
 import com.lucian.carserviceapp.ui.viewmodel.CarViewModel
@@ -29,6 +37,7 @@ import java.util.*
 fun CarDetailScreen(
     carId: Long,
     onAddServiceClick: (Long) -> Unit,
+    onEditServiceClick: (Long, Long) -> Unit,
     onMaintenanceClick: (Long) -> Unit,
     onBackClick: () -> Unit,
     carViewModel: CarViewModel = hiltViewModel(),
@@ -36,21 +45,56 @@ fun CarDetailScreen(
     maintenanceViewModel: MaintenanceViewModel = hiltViewModel()
 ) {
     val car by carViewModel.car.collectAsState()
-    val serviceEntries by serviceViewModel.serviceEntries.collectAsState()
+    val serviceEntries by serviceViewModel.filteredServiceEntries.collectAsState()
+    val searchQuery by serviceViewModel.searchQuery.collectAsState()
+    val isImporting by serviceViewModel.isImporting.collectAsState()
     val maintenanceStatuses by maintenanceViewModel.getMaintenanceStatus(carId).collectAsState(initial = emptyList())
+    val snackbarHostState = remember { SnackbarHostState() }
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            uri?.let { serviceViewModel.importServiceEntries(carId, it) }
+        }
+    )
 
     LaunchedEffect(carId) {
         carViewModel.getCarById(carId)
         serviceViewModel.fetchEntriesForCar(carId)
     }
 
+    LaunchedEffect(Unit) {
+        serviceViewModel.message.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(car?.let { "${it.make} ${it.model}" } ?: "Car Details") },
+                title = { Text("Service History") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isImporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(
+                            onClick = {
+                                importLauncher.launch(
+                                    arrayOf("text/*", "text/csv", "application/vnd.ms-excel", "*/*")
+                                )
+                            }
+                        ) {
+                            Icon(ImportIcon, contentDescription = "Import service history")
+                        }
                     }
                 }
             )
@@ -59,7 +103,8 @@ fun CarDetailScreen(
             FloatingActionButton(onClick = { onAddServiceClick(carId) }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Service")
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -67,25 +112,86 @@ fun CarDetailScreen(
                 .padding(paddingValues)
         ) {
             car?.let {
-                CarInfoSection(it)
-                HorizontalDivider()
                 MaintenanceSection(
                     statuses = maintenanceStatuses,
                     onViewAllClick = { onMaintenanceClick(carId) }
                 )
                 HorizontalDivider()
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = serviceViewModel::onSearchQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(56.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    placeholder = {
+                        Text(
+                            text = "Search services or operations",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true
+                )
             }
             
             if (serviceEntries.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No service entries yet")
+                    Text(if (searchQuery.isNotEmpty()) "No services matching \"$searchQuery\"" else "No service entries yet")
                 }
             } else {
-                ServiceEntriesList(serviceEntries)
+                ServiceEntriesList(
+                    entries = serviceEntries,
+                    onEditClick = { entry -> onEditServiceClick(carId, entry.id) },
+                    onDeleteClick = serviceViewModel::deleteServiceEntry
+                )
             }
         }
     }
 }
+
+private val ImportIcon: ImageVector
+    get() {
+        if (_importIcon != null) return _importIcon!!
+        _importIcon = ImageVector.Builder(
+            name = "ImportIcon",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
+                moveTo(5f, 20f)
+                horizontalLineTo(19f)
+                curveTo(20.1f, 20f, 21f, 19.1f, 21f, 18f)
+                verticalLineTo(15f)
+                horizontalLineTo(19f)
+                verticalLineTo(18f)
+                horizontalLineTo(5f)
+                verticalLineTo(15f)
+                horizontalLineTo(3f)
+                verticalLineTo(18f)
+                curveTo(3f, 19.1f, 3.9f, 20f, 5f, 20f)
+                close()
+                moveTo(13f, 4f)
+                horizontalLineTo(11f)
+                verticalLineTo(12.2f)
+                lineTo(7.4f, 8.6f)
+                lineTo(6f, 10f)
+                lineTo(12f, 16f)
+                lineTo(18f, 10f)
+                lineTo(16.6f, 8.6f)
+                lineTo(13f, 12.2f)
+                verticalLineTo(4f)
+                close()
+            }
+        }.build()
+        return _importIcon!!
+    }
+
+private var _importIcon: ImageVector? = null
 
 @Composable
 fun MaintenanceSection(
@@ -139,31 +245,11 @@ fun MaintenanceSection(
 }
 
 @Composable
-fun CarInfoSection(car: Car) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "${car.make} ${car.model}",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "License Plate: ${car.licensePlate}",
-            style = MaterialTheme.typography.bodyLarge
-        )
-        car.vin?.let {
-            if (it.isNotBlank()) {
-                Text(text = "VIN: $it", style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-}
-
-@Composable
-fun ServiceEntriesList(entries: List<ServiceEntry>) {
+fun ServiceEntriesList(
+    entries: List<ServiceEntry>,
+    onEditClick: (ServiceEntry) -> Unit,
+    onDeleteClick: (ServiceEntry) -> Unit
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -177,16 +263,48 @@ fun ServiceEntriesList(entries: List<ServiceEntry>) {
             )
         }
         items(entries) { entry ->
-            ServiceEntryCard(entry)
+            ServiceEntryCard(
+                entry = entry,
+                onEditClick = { onEditClick(entry) },
+                onDeleteClick = { onDeleteClick(entry) }
+            )
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ServiceEntryCard(entry: ServiceEntry) {
+fun ServiceEntryCard(
+    entry: ServiceEntry,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
     val dateString = dateFormat.format(Date(entry.date))
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete service entry?") },
+            text = { Text("This service record will be permanently removed.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDeleteClick()
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -198,17 +316,28 @@ fun ServiceEntryCard(entry: ServiceEntry) {
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = dateString,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "${entry.kilometers} km",
-                    fontWeight = FontWeight.Medium
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = dateString,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "${entry.kilometers} km",
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Row {
+                    IconButton(onClick = onEditClick) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit service")
+                    }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete service")
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -222,11 +351,19 @@ fun ServiceEntryCard(entry: ServiceEntry) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                entry.operations.split(",").filter { it.isNotBlank() }.forEach { op ->
-                    SuggestionChip(
-                        onClick = { },
-                        label = { Text(op.trim()) }
-                    )
+                parseServiceOperations(entry.operations).forEach { op ->
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        tonalElevation = 1.dp
+                    ) {
+                        Text(
+                            text = op.trim(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
             }
             

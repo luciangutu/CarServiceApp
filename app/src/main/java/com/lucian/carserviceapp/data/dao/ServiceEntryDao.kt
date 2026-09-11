@@ -18,6 +18,9 @@ interface ServiceEntryDao {
     @Query("SELECT * FROM service_entries WHERE carId = :carId ORDER BY date DESC")
     fun getEntriesForCar(carId: Long): Flow<List<ServiceEntry>>
 
+    @Query("SELECT * FROM service_entries WHERE id = :id")
+    suspend fun getServiceById(id: Long): ServiceEntry?
+
     @Query("SELECT * FROM service_entries ORDER BY date DESC")
     fun getAllEntries(): Flow<List<ServiceEntry>>
 

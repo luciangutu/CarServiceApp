@@ -30,6 +30,7 @@ interface CarRepository {
     suspend fun insertServiceEntry(entry: ServiceEntry): Long
     suspend fun updateServiceEntry(entry: ServiceEntry)
     suspend fun deleteServiceEntry(entry: ServiceEntry)
+    suspend fun getServiceEntryById(id: Long): ServiceEntry?
     fun getEntriesForCar(carId: Long): Flow<List<ServiceEntry>>
     fun getAllEntries(): Flow<List<ServiceEntry>>
     suspend fun getUniqueOperations(): List<String>

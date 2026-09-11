@@ -19,7 +19,8 @@ fun TagInput(
     onTagsChanged: (List<String>) -> Unit,
     suggestions: List<String>,
     modifier: Modifier = Modifier,
-    label: String = "Operations"
+    label: String = "Operations",
+    onPendingTagChanged: (String) -> Unit = {}
 ) {
     var textFieldValue by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
@@ -37,11 +38,13 @@ fun TagInput(
                 value = textFieldValue,
                 onValueChange = {
                     textFieldValue = it
+                    onPendingTagChanged(it)
                     expanded = true
                     if (it.endsWith(",") || it.endsWith("\n")) {
                         val newTag = it.trim().removeSuffix(",").trim()
                         if (newTag.isNotEmpty() && !selectedTags.contains(newTag)) {
                             onTagsChanged(selectedTags + newTag)
+                            onPendingTagChanged("")
                         }
                         textFieldValue = ""
                         expanded = false
@@ -57,6 +60,7 @@ fun TagInput(
                         val newTag = textFieldValue.trim()
                         if (newTag.isNotEmpty() && !selectedTags.contains(newTag)) {
                             onTagsChanged(selectedTags + newTag)
+                            onPendingTagChanged("")
                         }
                         textFieldValue = ""
                         expanded = false
@@ -75,6 +79,7 @@ fun TagInput(
                             onClick = {
                                 if (!selectedTags.contains(suggestion)) {
                                     onTagsChanged(selectedTags + suggestion)
+                                    onPendingTagChanged("")
                                 }
                                 textFieldValue = ""
                                 expanded = false

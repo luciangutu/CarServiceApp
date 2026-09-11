@@ -48,6 +48,9 @@ fun AppNavigation(navController: NavHostController) {
                 onAddServiceClick = { id ->
                     navController.navigate(Screen.ServiceAddEdit.createRoute(id))
                 },
+                onEditServiceClick = { id, serviceId ->
+                    navController.navigate(Screen.ServiceAddEdit.createRoute(id, serviceId))
+                },
                 onMaintenanceClick = { id ->
                     navController.navigate(Screen.MaintenanceIntervals.createRoute(id))
                 },

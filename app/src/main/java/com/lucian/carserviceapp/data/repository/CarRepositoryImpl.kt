@@ -39,6 +39,7 @@ class CarRepositoryImpl @Inject constructor(
     override suspend fun insertServiceEntry(entry: ServiceEntry): Long = serviceEntryDao.insert(entry)
     override suspend fun updateServiceEntry(entry: ServiceEntry) = serviceEntryDao.update(entry)
     override suspend fun deleteServiceEntry(entry: ServiceEntry) = serviceEntryDao.delete(entry)
+    override suspend fun getServiceEntryById(id: Long): ServiceEntry? = serviceEntryDao.getServiceById(id)
     override fun getEntriesForCar(carId: Long): Flow<List<ServiceEntry>> = serviceEntryDao.getEntriesForCar(carId)
     override fun getAllEntries(): Flow<List<ServiceEntry>> = serviceEntryDao.getAllEntries()
     override suspend fun getUniqueOperations(): List<String> = serviceEntryDao.getUniqueOperations()

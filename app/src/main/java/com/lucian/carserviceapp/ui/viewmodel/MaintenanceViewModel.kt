@@ -2,6 +2,7 @@ package com.lucian.carserviceapp.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lucian.carserviceapp.data.hasOperation
 import com.lucian.carserviceapp.data.entity.MaintenanceInterval
 import com.lucian.carserviceapp.data.repository.CarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,7 +14,9 @@ data class MaintenanceStatus(
     val interval: MaintenanceInterval,
     val component: String,
     val dueKm: Int,
-    val dueDate: Long,
+    val dueDate: Long?,
+    val lastDoneKm: Int?,
+    val lastDoneDate: Long?,
     val status: String
 )
 
@@ -32,15 +35,28 @@ class MaintenanceViewModel @Inject constructor(
 
             intervals.map { interval ->
                 val latestEntry = entries
-                    .filter { it.operations.contains(interval.component, ignoreCase = true) }
+                    .filter { it.hasOperation(interval.component) }
                     .maxByOrNull { it.date }
 
-                val dueKm = (latestEntry?.kilometers ?: 0) + interval.intervalKm
-                val dueDate = (latestEntry?.date ?: 0L) + interval.intervalYears.toLong() * 365 * 24 * 60 * 60 * 1000
+                val dueKm = if (interval.intervalKm > 0) {
+                    (latestEntry?.kilometers ?: 0) + interval.intervalKm
+                } else {
+                    0
+                }
+                val dueDate = if (interval.intervalYears > 0 && latestEntry != null) {
+                    (latestEntry?.date ?: 0L) + interval.intervalYears.toLong() * 365 * 24 * 60 * 60 * 1000
+                } else {
+                    null
+                }
+                val isKmOverdue = interval.intervalKm > 0 && currentKm >= dueKm
+                val isDateOverdue = dueDate != null && currentTime >= dueDate
+                val isKmUpcoming = interval.intervalKm > 0 && currentKm >= dueKm - 1000
+                val isDateUpcoming = dueDate != null &&
+                        currentTime >= dueDate - (30L * 24 * 60 * 60 * 1000)
 
                 val status = when {
-                    currentKm >= dueKm || (dueDate > 0 && currentTime >= dueDate) -> "Overdue"
-                    currentKm >= dueKm - 1000 || (dueDate > 0 && currentTime >= dueDate - (30L * 24 * 60 * 60 * 1000)) -> "Upcoming"
+                    isKmOverdue || isDateOverdue -> "Overdue"
+                    isKmUpcoming || isDateUpcoming -> "Upcoming"
                     else -> "OK"
                 }
 
@@ -49,6 +65,8 @@ class MaintenanceViewModel @Inject constructor(
                     component = interval.component,
                     dueKm = dueKm,
                     dueDate = dueDate,
+                    lastDoneKm = latestEntry?.kilometers,
+                    lastDoneDate = latestEntry?.date,
                     status = status
                 )
             }
@@ -60,6 +78,18 @@ class MaintenanceViewModel @Inject constructor(
             repository.insertMaintenanceInterval(
                 MaintenanceInterval(
                     carId = carId,
+                    component = component,
+                    intervalKm = intervalKm,
+                    intervalYears = intervalYears
+                )
+            )
+        }
+    }
+
+    fun updateInterval(interval: MaintenanceInterval, component: String, intervalKm: Int, intervalYears: Int) {
+        viewModelScope.launch {
+            repository.updateMaintenanceInterval(
+                interval.copy(
                     component = component,
                     intervalKm = intervalKm,
                     intervalYears = intervalYears

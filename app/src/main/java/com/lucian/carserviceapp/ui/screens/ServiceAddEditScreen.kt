@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.lucian.carserviceapp.data.parseServiceOperations
 import com.lucian.carserviceapp.ui.components.TagInput
 import com.lucian.carserviceapp.ui.viewmodel.ServiceViewModel
 import java.text.SimpleDateFormat
@@ -34,6 +35,32 @@ fun ServiceAddEditScreen(
     var cost by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
     var selectedOperations by remember { mutableStateOf(emptyList<String>()) }
+    var pendingOperation by remember { mutableStateOf("") }
+
+    val serviceEntry by serviceViewModel.serviceEntry.collectAsState()
+
+    LaunchedEffect(serviceId) {
+        serviceViewModel.getServiceEntryById(serviceId)
+    }
+
+    LaunchedEffect(serviceEntry) {
+        if (serviceEntry == null && serviceId == 0L) {
+            kilometers = ""
+            serviceName = ""
+            cost = ""
+            selectedDate = System.currentTimeMillis()
+            selectedOperations = emptyList()
+            pendingOperation = ""
+        } else {
+            serviceEntry?.let {
+                kilometers = it.kilometers.toString()
+                serviceName = it.serviceName
+                cost = it.cost?.toString() ?: ""
+                selectedDate = it.date
+                selectedOperations = parseServiceOperations(it.operations)
+            }
+        }
+    }
 
     val suggestions by serviceViewModel.suggestions.collectAsState()
     val suggestionNames = suggestions.map { it.name }
@@ -100,6 +127,7 @@ fun ServiceAddEditScreen(
                 selectedTags = selectedOperations,
                 onTagsChanged = { selectedOperations = it },
                 suggestions = suggestionNames,
+                onPendingTagChanged = { pendingOperation = it },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -113,13 +141,18 @@ fun ServiceAddEditScreen(
 
             Button(
                 onClick = {
+                    val finalOperations = if (pendingOperation.trim().isNotEmpty() && !selectedOperations.contains(pendingOperation.trim())) {
+                        selectedOperations + pendingOperation.trim()
+                    } else {
+                        selectedOperations
+                    }
                     serviceViewModel.saveServiceEntry(
                         id = serviceId,
                         carId = carId,
                         date = selectedDate,
                         kilometers = kilometers.toIntOrNull() ?: 0,
                         serviceName = serviceName,
-                        operations = selectedOperations,
+                        operations = finalOperations,
                         cost = cost.toDoubleOrNull(),
                         onSuccess = onSaveSuccess
                     )
@@ -132,4 +165,3 @@ fun ServiceAddEditScreen(
         }
     }
 }
-

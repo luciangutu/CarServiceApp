@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.lucian.carserviceapp.data.entity.MaintenanceInterval
 import com.lucian.carserviceapp.ui.viewmodel.MaintenanceStatus
 import com.lucian.carserviceapp.ui.viewmodel.MaintenanceViewModel
 import java.text.SimpleDateFormat
@@ -29,6 +31,7 @@ fun MaintenanceIntervalsScreen(
 ) {
     val statuses by viewModel.getMaintenanceStatus(carId).collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingInterval by remember { mutableStateOf<MaintenanceInterval?>(null) }
 
     Scaffold(
         topBar = {
@@ -61,6 +64,7 @@ fun MaintenanceIntervalsScreen(
                     items(statuses) { status ->
                         MaintenanceStatusCard(
                             status = status,
+                            onEdit = { editingInterval = status.interval },
                             onDelete = { viewModel.deleteInterval(status.interval) }
                         )
                     }
@@ -70,11 +74,26 @@ fun MaintenanceIntervalsScreen(
     }
 
     if (showAddDialog) {
-        AddIntervalDialog(
+        MaintenanceIntervalDialog(
             onDismiss = { showAddDialog = false },
+            title = "Add Maintenance Interval",
+            confirmText = "Add",
             onConfirm = { component, km, years ->
                 viewModel.addInterval(carId, component, km, years)
                 showAddDialog = false
+            }
+        )
+    }
+
+    editingInterval?.let { interval ->
+        MaintenanceIntervalDialog(
+            interval = interval,
+            onDismiss = { editingInterval = null },
+            title = "Edit Maintenance Interval",
+            confirmText = "Save",
+            onConfirm = { component, km, years ->
+                viewModel.updateInterval(interval, component, km, years)
+                editingInterval = null
             }
         )
     }
@@ -83,6 +102,7 @@ fun MaintenanceIntervalsScreen(
 @Composable
 fun MaintenanceStatusCard(
     status: MaintenanceStatus,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
@@ -90,6 +110,22 @@ fun MaintenanceStatusCard(
         "Overdue" -> MaterialTheme.colorScheme.error
         "Upcoming" -> Color(0xFFFFA500)
         else -> MaterialTheme.colorScheme.primary
+    }
+    val dueParts = buildList {
+        if (status.interval.intervalKm > 0) {
+            add("${status.dueKm} km")
+        }
+        status.dueDate?.let {
+            add(dateFormat.format(Date(it)))
+        }
+    }
+    val lastDoneParts = buildList {
+        status.lastDoneKm?.let {
+            add("$it km")
+        }
+        status.lastDoneDate?.let {
+            add(dateFormat.format(Date(it)))
+        }
     }
 
     Card(
@@ -107,15 +143,21 @@ fun MaintenanceStatusCard(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Due: ${status.dueKm} km / ${dateFormat.format(Date(status.dueDate))}")
+                Text(text = "Due: ${dueParts.takeIf { it.isNotEmpty() }?.joinToString(" / ") ?: "Not scheduled"}")
+                Text(text = "Last done: ${lastDoneParts.takeIf { it.isNotEmpty() }?.joinToString(" / ") ?: "Never"}")
                 Text(
                     text = "Status: ${status.status}",
                     color = statusColor,
                     fontWeight = FontWeight.Bold
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+            Row {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
             }
         }
     }
@@ -123,22 +165,40 @@ fun MaintenanceStatusCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddIntervalDialog(
+fun MaintenanceIntervalDialog(
+    interval: MaintenanceInterval? = null,
     onDismiss: () -> Unit,
+    title: String,
+    confirmText: String,
     onConfirm: (String, Int, Int) -> Unit
 ) {
-    var component by remember { mutableStateOf("") }
-    var km by remember { mutableStateOf("") }
-    var years by remember { mutableStateOf("") }
+    var component by remember(interval) { mutableStateOf(interval?.component.orEmpty()) }
+    var km by remember(interval) { mutableStateOf(interval?.intervalKm?.toString().orEmpty()) }
+    var years by remember(interval) { mutableStateOf(interval?.intervalYears?.toString().orEmpty()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Maintenance Interval") },
+        title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = component, onValueChange = { component = it }, label = { Text("Component (e.g. Ulei)") })
-                OutlinedTextField(value = km, onValueChange = { km = it }, label = { Text("Interval KM") })
-                OutlinedTextField(value = years, onValueChange = { years = it }, label = { Text("Interval Years") })
+                OutlinedTextField(
+                    value = component,
+                    onValueChange = { component = it },
+                    label = { Text("Component (e.g. Ulei)") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = km,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) km = it },
+                    label = { Text("Interval KM") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = years,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) years = it },
+                    label = { Text("Interval Years") },
+                    singleLine = true
+                )
             }
         },
         confirmButton = {
@@ -149,7 +209,7 @@ fun AddIntervalDialog(
                     onConfirm(component, kmInt, yearsInt)
                 }
             }) {
-                Text("Add")
+                Text(confirmText)
             }
         },
         dismissButton = {
