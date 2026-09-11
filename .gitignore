@@ -20,6 +20,9 @@ local.properties
 # Logs
 *.log
 
+# Local workflow artifacts
+.artifacts/
+
 # OS files
 .DS_Store
 Thumbs.db
