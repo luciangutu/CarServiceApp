@@ -40,11 +40,15 @@ Run tests with:
 
 Import and export are available from the app's Settings screen.
 
-Export uses the `Backup to Google Drive / Share` button. The app locates the local Room database file named `car_service_database`, exposes it through the app `FileProvider`, and opens Android's share sheet so the file can be saved to Google Drive, sent to another app, or stored elsewhere.
+Export uses the `Backup to Google Drive / Share` button. The app generates a structured JSON file containing all vehicle data, service logs, maintenance intervals, and operation suggestions. This file is shared through the Android share sheet for saving to cloud storage or other apps.
 
-Import uses the `Restore from File` button. The app opens Android's document picker, reads the selected file, closes the Room database, and overwrites the local `car_service_database` file with the selected backup. After a successful restore, restart the app so Room reopens the replaced database cleanly.
+Import uses the `Restore from File` button. The app opens a document picker to select a previously exported JSON backup. It then clears the current local database and performs a safe, sequential import of all entities, maintaining database integrity and relationships.
 
-Backups are raw Room database files. Restore should use a backup created by this app and matching the current database schema version.
+Backups are stored in a portable JSON format, making them resilient to future database schema updates. A backup includes:
+- Cars (including current odometer readings)
+- Service History Entries
+- Maintenance Intervals
+- Operation Suggestions
 
 ## Project Structure
 

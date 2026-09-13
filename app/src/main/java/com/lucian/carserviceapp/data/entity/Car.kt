@@ -11,5 +11,6 @@ data class Car(
     val year: Int,
     val licensePlate: String,
     val vin: String? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    val odometer: Int = 0
 )

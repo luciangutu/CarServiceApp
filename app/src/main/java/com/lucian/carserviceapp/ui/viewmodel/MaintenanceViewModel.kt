@@ -28,9 +28,12 @@ class MaintenanceViewModel @Inject constructor(
     fun getMaintenanceStatus(carId: Long): Flow<List<MaintenanceStatus>> {
         return combine(
             repository.getIntervalsForCar(carId),
-            repository.getEntriesForCar(carId)
-        ) { intervals, entries ->
-            val currentKm = entries.maxOfOrNull { it.kilometers } ?: 0
+            repository.getEntriesForCar(carId),
+            flow { emit(repository.getCarById(carId)) }
+        ) { intervals, entries, car ->
+            val maxEntryKm = entries.maxOfOrNull { it.kilometers } ?: 0
+            val carOdometer = car?.odometer ?: 0
+            val currentKm = maxOf(maxEntryKm, carOdometer)
             val currentTime = System.currentTimeMillis()
 
             intervals.map { interval ->

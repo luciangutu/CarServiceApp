@@ -73,6 +73,9 @@ dependencies {
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
+    // Gson for JSON backup/restore
+    implementation("com.google.code.gson:gson:2.14.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 

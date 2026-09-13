@@ -35,11 +35,11 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.exportUri.collect { uri ->
             val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/octet-stream"
+                type = "application/json"
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Backup Database"))
+            context.startActivity(Intent.createChooser(intent, "Backup Database (JSON)"))
         }
     }
 

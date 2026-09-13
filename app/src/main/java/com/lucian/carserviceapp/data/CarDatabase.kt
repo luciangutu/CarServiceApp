@@ -18,7 +18,7 @@ import com.lucian.carserviceapp.data.entity.ServiceEntry
         MaintenanceInterval::class,
         OperationSuggestion::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class CarDatabase : RoomDatabase() {

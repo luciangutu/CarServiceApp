@@ -50,7 +50,8 @@ class DashboardViewModel @Inject constructor(
         filteredCars.map { car ->
             val carIntervals = intervals.filter { it.carId == car.id }
             val carEntries = entries.filter { it.carId == car.id }
-            val currentKm = carEntries.maxOfOrNull { it.kilometers } ?: 0
+            val maxEntryKm = carEntries.maxOfOrNull { it.kilometers } ?: 0
+            val currentKm = maxOf(maxEntryKm, car.odometer)
 
             val hasOverdue = carIntervals.any { interval ->
                 val latestEntry = carEntries

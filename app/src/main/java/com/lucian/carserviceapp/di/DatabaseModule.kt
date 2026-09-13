@@ -14,9 +14,18 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE cars ADD COLUMN odometer INTEGER NOT NULL DEFAULT 0")
+        }
+    }
 
     @Provides
     @Singleton
@@ -27,7 +36,8 @@ object DatabaseModule {
             context,
             CarDatabase::class.java,
             "car_service_database"
-        ).build()
+        ).addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     @Provides

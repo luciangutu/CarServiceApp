@@ -13,5 +13,8 @@ interface OperationSuggestionDao {
     suspend fun delete(suggestion: OperationSuggestion)
 
     @Query("SELECT * FROM operation_suggestions")
+    suspend fun getSuggestionsList(): List<OperationSuggestion>
+
+    @Query("SELECT * FROM operation_suggestions")
     fun getSuggestions(): Flow<List<OperationSuggestion>>
 }

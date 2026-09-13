@@ -19,5 +19,8 @@ interface MaintenanceIntervalDao {
     fun getIntervalsForCar(carId: Long): Flow<List<MaintenanceInterval>>
 
     @Query("SELECT * FROM maintenance_intervals")
+    suspend fun getAllIntervalsList(): List<MaintenanceInterval>
+
+    @Query("SELECT * FROM maintenance_intervals")
     fun getAllIntervals(): Flow<List<MaintenanceInterval>>
 }

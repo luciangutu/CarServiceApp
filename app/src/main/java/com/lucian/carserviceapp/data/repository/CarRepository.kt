@@ -12,6 +12,7 @@ interface CarRepository {
     suspend fun updateCar(car: Car)
     suspend fun deleteCar(car: Car)
     suspend fun getCarById(id: Long): Car?
+    suspend fun getAllCarsList(): List<Car>
     fun getAllCars(): Flow<List<Car>>
 
     // Maintenance Interval operations
@@ -19,11 +20,13 @@ interface CarRepository {
     suspend fun updateMaintenanceInterval(interval: MaintenanceInterval)
     suspend fun deleteMaintenanceInterval(interval: MaintenanceInterval)
     fun getIntervalsForCar(carId: Long): Flow<List<MaintenanceInterval>>
+    suspend fun getAllIntervalsList(): List<MaintenanceInterval>
     fun getAllIntervals(): Flow<List<MaintenanceInterval>>
 
     // Operation Suggestion operations
     suspend fun insertOperationSuggestion(suggestion: OperationSuggestion)
     suspend fun deleteOperationSuggestion(suggestion: OperationSuggestion)
+    suspend fun getSuggestionsList(): List<OperationSuggestion>
     fun getSuggestions(): Flow<List<OperationSuggestion>>
 
     // Service Entry operations
@@ -32,6 +35,7 @@ interface CarRepository {
     suspend fun deleteServiceEntry(entry: ServiceEntry)
     suspend fun getServiceEntryById(id: Long): ServiceEntry?
     fun getEntriesForCar(carId: Long): Flow<List<ServiceEntry>>
+    suspend fun getAllEntriesList(): List<ServiceEntry>
     fun getAllEntries(): Flow<List<ServiceEntry>>
     suspend fun getUniqueOperations(): List<String>
 }

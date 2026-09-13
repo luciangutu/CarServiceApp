@@ -18,9 +18,26 @@ import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
 import javax.inject.Inject
 
+import com.google.gson.GsonBuilder
+import com.lucian.carserviceapp.data.entity.Car
+import com.lucian.carserviceapp.data.entity.MaintenanceInterval
+import com.lucian.carserviceapp.data.entity.OperationSuggestion
+import com.lucian.carserviceapp.data.entity.ServiceEntry
+import com.lucian.carserviceapp.data.repository.CarRepository
+import java.io.File
+
+data class DatabaseBackup(
+    val version: Int,
+    val cars: List<Car>,
+    val serviceEntries: List<ServiceEntry>,
+    val maintenanceIntervals: List<MaintenanceInterval>,
+    val operationSuggestions: List<OperationSuggestion>
+)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val repository: CarRepository,
     private val database: CarDatabase
 ) : ViewModel() {
 
@@ -37,17 +54,30 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val dbFile = context.getDatabasePath("car_service_database")
-                if (dbFile.exists()) {
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        dbFile
+                val backupData = withContext(Dispatchers.IO) {
+                    DatabaseBackup(
+                        version = 2,
+                        cars = repository.getAllCarsList(),
+                        serviceEntries = repository.getAllEntriesList(),
+                        maintenanceIntervals = repository.getAllIntervalsList(),
+                        operationSuggestions = repository.getSuggestionsList()
                     )
-                    _exportUri.emit(uri)
-                } else {
-                    _message.emit("Database file not found")
                 }
+
+                val gson = GsonBuilder().setPrettyPrinting().create()
+                val jsonString = gson.toJson(backupData)
+
+                val cacheFile = File(context.cacheDir, "car_service_backup.json")
+                withContext(Dispatchers.IO) {
+                    cacheFile.writeText(jsonString)
+                }
+
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    cacheFile
+                )
+                _exportUri.emit(uri)
             } catch (e: Exception) {
                 _message.emit("Export failed: ${e.message}")
             } finally {
@@ -60,19 +90,45 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                withContext(Dispatchers.IO) {
-                    val dbFile = context.getDatabasePath("car_service_database")
-                    
-                    // Close database before overwriting
-                    database.close()
-                    
-                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        FileOutputStream(dbFile).use { outputStream ->
-                            inputStream?.copyTo(outputStream)
-                        }
+                val success = withContext(Dispatchers.IO) {
+                    val jsonContent = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        inputStream.bufferedReader().use { it.readText() }
                     }
+
+                    if (jsonContent.isNullOrBlank()) {
+                        return@withContext false
+                    }
+
+                    val gson = GsonBuilder().create()
+                    val backup = gson.fromJson(jsonContent, DatabaseBackup::class.java)
+
+                    // Clear database tables securely
+                    // To handle auto-increment resetting or safely rebuilding, we populate lists.
+                    // Room doesn't allow dropping inside normal transactions cleanly without closing, 
+                    // but we can clear tables and re-insert elements directly.
+                    database.runInTransaction {
+                        // We use a coroutine launcher runBlocking or sequential clear query if available.
+                        // Since we are on Dispatchers.IO, we can launch blockers or run direct SQLite queries.
+                        val sdb = database.openHelper.writableDatabase
+                        sdb.execSQL("DELETE FROM operation_suggestions")
+                        sdb.execSQL("DELETE FROM maintenance_intervals")
+                        sdb.execSQL("DELETE FROM service_entries")
+                        sdb.execSQL("DELETE FROM cars")
+                    }
+
+                    // Re-insert backup entities step-by-step to respect Foreign Key requirements
+                    backup.cars.forEach { repository.insertCar(it) }
+                    backup.serviceEntries.forEach { repository.insertServiceEntry(it) }
+                    backup.maintenanceIntervals.forEach { repository.insertMaintenanceInterval(it) }
+                    backup.operationSuggestions.forEach { repository.insertOperationSuggestion(it) }
+                    true
                 }
-                _message.emit("Database restored successfully. Please restart the app.")
+
+                if (success) {
+                    _message.emit("Database restored successfully from JSON.")
+                } else {
+                    _message.emit("Import failed: Empty backup file.")
+                }
             } catch (e: Exception) {
                 _message.emit("Import failed: ${e.message}")
             } finally {

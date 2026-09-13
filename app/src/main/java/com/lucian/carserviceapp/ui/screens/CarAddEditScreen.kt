@@ -30,6 +30,7 @@ fun CarAddEditScreen(
     var licensePlate by remember { mutableStateOf("") }
     var vin by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var odometer by remember { mutableStateOf("") }
 
     var makeError by remember { mutableStateOf(false) }
     var modelError by remember { mutableStateOf(false) }
@@ -49,6 +50,7 @@ fun CarAddEditScreen(
             licensePlate = car.licensePlate
             vin = car.vin ?: ""
             notes = car.notes ?: ""
+            odometer = car.odometer.toString()
         }
     }
 
@@ -79,6 +81,7 @@ fun CarAddEditScreen(
                                 licensePlate = licensePlate,
                                 vin = vin.ifBlank { null },
                                 notes = notes.ifBlank { null },
+                                odometer = odometer.toIntOrNull() ?: 0,
                                 onSuccess = onNavigateBack
                             )
                         }
@@ -163,6 +166,15 @@ fun CarAddEditScreen(
             )
 
             OutlinedTextField(
+                value = odometer,
+                onValueChange = { if (it.all { char -> char.isDigit() }) odometer = it },
+                label = { Text("Odometer (Current km)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+
+            OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
                 label = { Text("Notes") },
@@ -183,6 +195,7 @@ fun CarAddEditScreen(
                             licensePlate = licensePlate,
                             vin = vin.ifBlank { null },
                             notes = notes.ifBlank { null },
+                            odometer = odometer.toIntOrNull() ?: 0,
                             onSuccess = onNavigateBack
                         )
                     }

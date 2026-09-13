@@ -37,6 +37,7 @@ class CarViewModel @Inject constructor(
         licensePlate: String,
         vin: String?,
         notes: String?,
+        odometer: Int,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
@@ -47,13 +48,22 @@ class CarViewModel @Inject constructor(
                 year = year,
                 licensePlate = licensePlate,
                 vin = vin,
-                notes = notes
+                notes = notes,
+                odometer = odometer
             )
             if (car.id == 0L) {
                 repository.insertCar(car)
             } else {
                 repository.updateCar(car)
             }
+            onSuccess()
+        }
+    }
+
+    fun deleteCar(onSuccess: () -> Unit) {
+        val currentCar = _car.value ?: return
+        viewModelScope.launch {
+            repository.deleteCar(currentCar)
             onSuccess()
         }
     }

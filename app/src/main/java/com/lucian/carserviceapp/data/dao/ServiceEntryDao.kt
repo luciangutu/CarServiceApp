@@ -22,6 +22,9 @@ interface ServiceEntryDao {
     suspend fun getServiceById(id: Long): ServiceEntry?
 
     @Query("SELECT * FROM service_entries ORDER BY date DESC")
+    suspend fun getAllEntriesList(): List<ServiceEntry>
+
+    @Query("SELECT * FROM service_entries ORDER BY date DESC")
     fun getAllEntries(): Flow<List<ServiceEntry>>
 
     @Query("SELECT DISTINCT operations FROM service_entries")

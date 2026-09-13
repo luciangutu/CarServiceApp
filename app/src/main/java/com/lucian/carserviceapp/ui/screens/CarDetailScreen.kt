@@ -38,6 +38,7 @@ fun CarDetailScreen(
     carId: Long,
     onAddServiceClick: (Long) -> Unit,
     onEditServiceClick: (Long, Long) -> Unit,
+    onEditCarClick: (Long) -> Unit,
     onMaintenanceClick: (Long) -> Unit,
     onBackClick: () -> Unit,
     carViewModel: CarViewModel = hiltViewModel(),
@@ -57,6 +58,33 @@ fun CarDetailScreen(
         }
     )
 
+    var showDeleteCarDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteCarDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteCarDialog = false },
+            title = { Text("Delete Car?") },
+            text = { Text("Are you sure you want to delete this car? All associated service history and maintenance intervals will be permanently removed.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteCarDialog = false
+                        carViewModel.deleteCar {
+                            onBackClick()
+                        }
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteCarDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     LaunchedEffect(carId) {
         carViewModel.getCarById(carId)
         serviceViewModel.fetchEntriesForCar(carId)
@@ -71,13 +99,19 @@ fun CarDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Service History") },
+                title = { Text(car?.let { "${it.make} ${it.model}" } ?: "Service History") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
+                    IconButton(onClick = { onEditCarClick(carId) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Car")
+                    }
+                    IconButton(onClick = { showDeleteCarDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Car")
+                    }
                     if (isImporting) {
                         CircularProgressIndicator(
                             modifier = Modifier
