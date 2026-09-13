@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.FileOutputStream
 import javax.inject.Inject
 
 import com.google.gson.GsonBuilder
@@ -36,7 +35,7 @@ data class DatabaseBackup(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val repository: CarRepository,
     private val database: CarDatabase
 ) : ViewModel() {
