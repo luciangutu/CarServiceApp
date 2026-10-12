@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.github.luciangutu.carserviceapp"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.github.luciangutu.carserviceapp"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 5
         versionName = "1.4"
 
