@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("com.google.dagger.hilt.android")
@@ -13,8 +15,8 @@ android {
         applicationId = "com.github.luciangutu.carserviceapp"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -22,9 +24,42 @@ android {
         }
     }
 
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    val releaseProperties = if (keystorePropertiesFile.exists()) {
+        Properties().apply {
+            load(keystorePropertiesFile.inputStream())
+        }
+    } else null
+
+    val releaseKeystoreFile = releaseProperties?.getProperty("storeFile")?.let { path ->
+        val fileInRoot = rootProject.file(path)
+        val fileInApp = file(path)
+        when {
+            fileInRoot.exists() -> fileInRoot
+            fileInApp.exists() -> fileInApp
+            else -> null
+        }
+    }
+
+    signingConfigs {
+        if (releaseProperties != null && releaseKeystoreFile != null) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseProperties.getProperty("storePassword")
+                keyAlias = releaseProperties.getProperty("keyAlias")
+                keyPassword = releaseProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (releaseProperties != null && releaseKeystoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

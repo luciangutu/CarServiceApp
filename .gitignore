@@ -24,6 +24,11 @@ local.properties
 .artifacts/
 *.artifact.md
 
+# Keystore & Signing
+*.jks
+*.keystore
+keystore.properties
+
 # OS files
 .DS_Store
 Thumbs.db
