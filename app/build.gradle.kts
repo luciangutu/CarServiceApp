@@ -6,15 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "com.lucian.carserviceapp"
+    namespace = "com.github.luciangutu.carserviceapp"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.lucian.carserviceapp"
+        applicationId = "com.github.luciangutu.carserviceapp"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

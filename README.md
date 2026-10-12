@@ -52,6 +52,6 @@ Backups are stored in a portable JSON format, making them resilient to future da
 
 ## Project Structure
 
-- `app/src/main/java/com/lucian/carserviceapp/data`: Room entities, DAOs, database, and repository.
-- `app/src/main/java/com/lucian/carserviceapp/ui`: Compose screens, navigation, theme, components, and view models.
-- `app/src/main/java/com/lucian/carserviceapp/di`: Hilt modules.
+- `app/src/main/java/com/github/luciangutu/carserviceapp/data`: Room entities, DAOs, database, and repository.
+- `app/src/main/java/com/github/luciangutu/carserviceapp/ui`: Compose screens, navigation, theme, components, and view models.
+- `app/src/main/java/com/github/luciangutu/carserviceapp/di`: Hilt modules.
