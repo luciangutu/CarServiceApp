@@ -37,6 +37,7 @@ object DatabaseModule {
             CarDatabase::class.java,
             "car_service_database"
         ).addMigrations(MIGRATION_1_2)
+            .fallbackToDestructiveMigration(true)
             .build()
     }
 
