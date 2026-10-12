@@ -94,6 +94,14 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 CircularProgressIndicator()
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = "Version ${viewModel.appVersion}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
